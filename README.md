@@ -68,9 +68,9 @@ A modern web application that provides an intelligent shopping assistant powered
 3. **Set environment variables**
    ```bash
    export SF_DOMAIN="https://your-domain.my.salesforce.com"
-   export CLIENT_ID="your_client_id"
-   export CLIENT_SECRET="your_client_secret"
-   export AGENT_ID="your_agent_id"
+   export CLIENT_ID="3MVG9XXXXXXXXXXXXXXXXXXXXXXXXX"
+   export CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+   export AGENT_ID="0XXXXXXXXXXXXXXX"
    ```
 
 4. **Run the application**
@@ -88,9 +88,9 @@ A modern web application that provides an intelligent shopping assistant powered
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `SF_DOMAIN` | Your Salesforce domain URL | `https://mycompany.my.salesforce.com` |
-| `CLIENT_ID` | OAuth Consumer Key | `3MVG9kb26yEQGZW2B43wI3x...` |
-| `CLIENT_SECRET` | OAuth Consumer Secret | `5B952ABFAE224963A1268D9...` |
-| `AGENT_ID` | Einstein AI Agent ID | `0XxKj000000bJAdKAM` |
+| `CLIENT_ID` | OAuth Consumer Key | `3MVG9XXXXXXXXXXXXXXXXXXXXXXXXX` |
+| `CLIENT_SECRET` | OAuth Consumer Secret | `XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX` |
+| `AGENT_ID` | Einstein AI Agent ID | `0XXXXXXXXXXXXXXX` |
 
 ## 🚢 Deployment
 
@@ -105,10 +105,10 @@ This project is configured for easy Heroku deployment:
 
 2. **Set environment variables**
    ```bash
-   heroku config:set SF_DOMAIN="your_domain"
-   heroku config:set CLIENT_ID="your_client_id"
-   heroku config:set CLIENT_SECRET="your_client_secret"
-   heroku config:set AGENT_ID="your_agent_id"
+   heroku config:set SF_DOMAIN="https://your-domain.my.salesforce.com"
+   heroku config:set CLIENT_ID="3MVG9XXXXXXXXXXXXXXXXXXXXXXXXX"
+   heroku config:set CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+   heroku config:set AGENT_ID="0XXXXXXXXXXXXXXX"
    ```
 
 3. **Deploy**
