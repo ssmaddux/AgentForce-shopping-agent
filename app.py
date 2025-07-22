@@ -1,6 +1,9 @@
 import os
 import uuid
 import requests
+import json
+import tempfile
+from pathlib import Path
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import logging
@@ -88,8 +91,50 @@ def end_session(token, session_id):
     logger.info(f"End session status: {resp.status_code}")
     return resp.status_code == 200
 
-# Store active sessions (in production, use Redis or database)
-active_sessions = {}
+# Store active sessions - using a simple file-based approach for Heroku
+
+# Create a shared session file in /tmp (persists across workers but not restarts)
+SESSION_FILE = "/tmp/chat_sessions.json"
+
+def load_sessions():
+    """Load sessions from shared file"""
+    try:
+        if os.path.exists(SESSION_FILE):
+            with open(SESSION_FILE, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load sessions: {e}")
+    return {}
+
+def save_sessions(sessions):
+    """Save sessions to shared file"""
+    try:
+        with open(SESSION_FILE, 'w') as f:
+            json.dump(sessions, f)
+    except Exception as e:
+        logger.error(f"Could not save sessions: {e}")
+
+def get_active_sessions():
+    """Get current active sessions"""
+    return load_sessions()
+
+def add_session(chat_id, session_info):
+    """Add a new session"""
+    sessions = load_sessions()
+    sessions[chat_id] = session_info
+    save_sessions(sessions)
+
+def remove_session(chat_id):
+    """Remove a session"""
+    sessions = load_sessions()
+    if chat_id in sessions:
+        del sessions[chat_id]
+        save_sessions(sessions)
+
+def get_session(chat_id):
+    """Get a specific session"""
+    sessions = load_sessions()
+    return sessions.get(chat_id)
 
 @app.route('/')
 def index():
@@ -109,11 +154,12 @@ def start_chat():
         
         # Store session info
         chat_id = str(uuid.uuid4())
-        active_sessions[chat_id] = {
+        session_info = {
             "token": token,
             "session_id": session_id,
             "sequence_id": 1
         }
+        add_session(chat_id, session_info)
         
         logger.info(f"Created new chat session: {chat_id}")
         
@@ -155,11 +201,11 @@ def send_message_api():
             logger.error(f"Missing required fields - chat_id: {chat_id}, message: {message}")
             return jsonify({"success": False, "error": "Missing chat_id or message"}), 400
             
-        if chat_id not in active_sessions:
-            logger.error(f"Chat session not found. chat_id: {chat_id}, active_sessions: {list(active_sessions.keys())}")
+        session_info = get_session(chat_id)
+        if not session_info:
+            all_sessions = list(get_active_sessions().keys())
+            logger.error(f"Chat session not found. chat_id: {chat_id}, active_sessions: {all_sessions}")
             return jsonify({"success": False, "error": "Invalid chat session"}), 400
-            
-        session_info = active_sessions[chat_id]
         
         # Send message to agent
         response = send_message(
@@ -169,8 +215,9 @@ def send_message_api():
             session_info["sequence_id"]
         )
         
-        # Update sequence ID
+        # Update sequence ID and save back
         session_info["sequence_id"] += 1
+        add_session(chat_id, session_info)
         
         # Extract agent response
         messages = response.get("messages", [])
@@ -192,10 +239,10 @@ def end_chat():
         data = request.get_json() if request.is_json else {}
         chat_id = data.get('chat_id')
         
-        if chat_id and chat_id in active_sessions:
-            session_info = active_sessions[chat_id]
+        session_info = get_session(chat_id) if chat_id else None
+        if session_info:
             end_session(session_info["token"], session_info["session_id"])
-            del active_sessions[chat_id]
+            remove_session(chat_id)
             logger.info(f"Ended chat session: {chat_id}")
             
         return jsonify({"success": True})
