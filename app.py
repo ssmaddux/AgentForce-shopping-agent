@@ -115,6 +115,8 @@ def start_chat():
             "sequence_id": 1
         }
         
+        logger.info(f"Created new chat session: {chat_id}")
+        
         # Get initial message from agent
         initial_message = session_data.get("messages", [{}])[0].get("message", "Hello! How can I help you today?")
         
@@ -132,14 +134,29 @@ def start_chat():
 def send_message_api():
     """Send a message to the agent"""
     try:
-        data = request.json
+        # Handle case where request.json is None
+        if not request.is_json:
+            logger.error("Request is not JSON")
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+            
+        data = request.get_json()
+        logger.info(f"Received request data: {data}")
+        
+        if not data:
+            logger.error("No JSON data received")
+            return jsonify({"success": False, "error": "No data received"}), 400
+            
         chat_id = data.get('chat_id')
         message = data.get('message')
         
+        logger.info(f"chat_id: {chat_id}, message: {message}")
+        
         if not chat_id or not message:
+            logger.error(f"Missing required fields - chat_id: {chat_id}, message: {message}")
             return jsonify({"success": False, "error": "Missing chat_id or message"}), 400
             
         if chat_id not in active_sessions:
+            logger.error(f"Chat session not found. chat_id: {chat_id}, active_sessions: {list(active_sessions.keys())}")
             return jsonify({"success": False, "error": "Invalid chat session"}), 400
             
         session_info = active_sessions[chat_id]
@@ -165,20 +182,21 @@ def send_message_api():
         })
         
     except Exception as e:
-        logger.error(f"Error sending message: {str(e)}")
+        logger.error(f"Error sending message: {str(e)}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/end-chat', methods=['POST'])
 def end_chat():
     """End a chat session"""
     try:
-        data = request.json
+        data = request.get_json() if request.is_json else {}
         chat_id = data.get('chat_id')
         
         if chat_id and chat_id in active_sessions:
             session_info = active_sessions[chat_id]
             end_session(session_info["token"], session_info["session_id"])
             del active_sessions[chat_id]
+            logger.info(f"Ended chat session: {chat_id}")
             
         return jsonify({"success": True})
         
